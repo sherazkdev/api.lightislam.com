@@ -30,12 +30,12 @@ bash deploy/install-on-vps.sh
 
 ```bash
 cp deploy/env.production.example .env   # edit secrets
-npm run prod:install
-npm run prod:build
-npm run prod:pm2
+npm run prod:setup   # ci + tsc build + prune devDeps + pm2 start
 pm2 save
 pm2 startup   # follow printed command for reboot persistence
 ```
+
+(`prod:install` uses full `npm ci` so TypeScript is available for `tsc`; `prod:prune` removes devDependencies after build.)
 
 **Every update (after `git pull`):**
 
