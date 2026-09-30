@@ -18,6 +18,7 @@ async function main() {
   const host = process.env.HOST ?? '0.0.0.0';
 
   await app.listen({ port, host });
+  app.log.info(`API listening on http://${host}:${port}`);
 
   const shutdown = async () => {
     await app.close();
