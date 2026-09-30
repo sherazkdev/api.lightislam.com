@@ -1,60 +1,65 @@
-# API security — simple (Roman Urdu)
+# API security (current phase)
 
-## Layer 1: `x-api-key` (ab code mein hai)
+**Decision:** No Firebase App Check in this phase. Use `x-api-key`, rate limiting, validation, and logging/monitoring only.
 
-- Mobile app har `POST /api/v1/devices` par header bheje:  
-  `x-api-key: <APP_API_KEY>`
-- Server `.env` mein same value: `APP_API_KEY=...`
-- **Refresh nahi** har minute — sirf app update par key change kar sakte ho.
-- APK se key nikal sakte hain → is liye Layer 2 + 3.
+## In scope (implemented)
 
-**Local dev:** `APP_API_KEY` optional (production par required).
+### 1. `x-api-key`
 
----
+- Header on `POST /api/v1/devices`: `x-api-key: <APP_API_KEY>`
+- Server env: `APP_API_KEY` (required when `NODE_ENV=production`)
+- No per-minute refresh; rotate on app release if needed.
+- `/health` stays public for uptime checks.
 
-## Layer 2: Rate limit (free — ab code + nginx)
+### 2. Rate limiting (free)
 
-| Jagah | Limit |
+| Layer | Policy |
 |--------|--------|
-| **Fastify** (`@fastify/rate-limit`) | ~120 req/min per IP (global), devices route **15/min** |
-| **Nginx** (VPS) | `deploy/nginx/conf.d/light-islam-rate-limit.conf` + site config |
+| Fastify `@fastify/rate-limit` | Global ~120/min per IP; devices route **15/min** |
+| Nginx (VPS) | See `deploy/nginx/conf.d/light-islam-rate-limit.conf` |
 
-Nginx setup VPS:
+### 3. Backend validation
 
-```bash
-sudo cp deploy/nginx/conf.d/light-islam-rate-limit.conf /etc/nginx/conf.d/
-sudo cp deploy/nginx/api.lightislam.com.conf /etc/nginx/sites-available/api.lightislam.com
-sudo nginx -t && sudo systemctl reload nginx
-```
+- JSON Schema on routes + Zod parse on body
+- `400` for validation errors
 
----
+### 4. Monitoring & logging
 
-## Layer 3: Firebase App Check (abhi implement nahi — samajh lo)
-
-**Problem:** x-api-key APK se leak ho sakti hai.
-
-**App Check kya hai?**  
-Google/Firebase app ko verify karta hai: request **asli Light of Islam app** se aayi (Play Store install), random Postman/script se nahi.
-
-- App mein Firebase SDK + App Check on.
-- Har API call ke sath **App Check token** (SDK khud banati hai, har minute login jaisa nahi).
-- Backend token verify kare → phir `POST /devices` allow.
-
-**Phase 2** mein add karenge jab app team ready ho. Docs: https://firebase.google.com/docs/app-check
+- Structured logs (Pino): device registration, auth failures, rate limits
+- MongoDB `apirequestlogs` collection for device register events (audit / abuse review)
+- PM2: `npm run prod:logs`
+- Nginx access logs on VPS: `/var/log/nginx/access.log`
 
 ---
 
-## Layer 4: User login (optional)
+## Out of scope (this phase)
 
-Jab app mein account ho: device register sirf logged-in user ke JWT se. Lamba expiry (30 din), refresh sirf expire/open app par.
+### Firebase App Check — **not implemented**
+
+Deferred until real abuse (bots, fake registrations, API misuse) justifies the cost.
+
+**Why deferred (team agreement):**
+
+- No current abuse requiring it
+- Extra Flutter + backend setup and maintenance
+- Risk for Huawei, custom ROMs, rooted devices
+- Old app versions can break if enforcement is turned on abruptly
+- Harder local/debug testing
+- Improves security but is not complete protection alone
+
+**Future:** If needed, App Check can be a **dedicated security phase** (Flutter SDK + backend token verify). This repo has **no** App Check SDK, middleware, or Firebase App Check config now. Add only when that phase is approved.
+
+### User login JWT (optional later)
+
+Not required for azan device registration today.
 
 ---
 
-## Mobile developer ko bhejo
+## Mobile client
 
 ```http
 POST https://api.lightislam.com/api/v1/devices
-x-api-key: <team se milega, APP_API_KEY>
+x-api-key: <APP_API_KEY>
 Content-Type: application/json
 
 {
@@ -65,4 +70,4 @@ Content-Type: application/json
 }
 ```
 
-`GET /health` — **no** api key (monitoring).
+OpenAPI: `https://api.lightislam.com/docs`

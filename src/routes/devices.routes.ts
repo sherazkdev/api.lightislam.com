@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { Device } from '../models/device.model.js';
 import { requireApiKey } from '../hooks/api-key.js';
 import { registerDeviceBodySchema } from '../schemas/device.schema.js';
+import { recordApiEvent } from '../services/audit-log.service.js';
 import type { SchedulerService } from '../services/scheduler.service.js';
 
 const registerDeviceBody = {
@@ -60,7 +61,27 @@ export async function deviceRoutes(app: FastifyInstance, scheduler: SchedulerSer
         { upsert: true, new: true, setDefaultsOnInsert: true },
       ).lean();
 
-      await scheduler.scheduleDeviceById(String(device._id));
+      const scheduled = await scheduler.scheduleDeviceById(String(device._id));
+
+      request.log.info(
+        {
+          event: 'device.registered',
+          deviceId: String(device._id),
+          timezone: body.timezone,
+          scheduledJobs: scheduled,
+          ip: request.ip,
+        },
+        'Device registered',
+      );
+      recordApiEvent({
+        event: 'device.registered',
+        method: 'POST',
+        path: '/api/v1/devices',
+        statusCode: 201,
+        ip: request.ip,
+        deviceId: String(device._id),
+        timezone: body.timezone,
+      });
 
       return reply.code(201).send({
         ok: true,
