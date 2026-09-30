@@ -26,12 +26,24 @@ bash deploy/install-on-vps.sh
 
 ## Manual PM2
 
+**First deploy on VPS:**
+
 ```bash
-npm ci && npm run build
-pm2 start deploy/ecosystem.config.cjs
+cp deploy/env.production.example .env   # edit secrets
+npm run prod:install
+npm run prod:build
+npm run prod:pm2
 pm2 save
 pm2 startup   # follow printed command for reboot persistence
 ```
+
+**Every update (after `git pull`):**
+
+```bash
+npm run prod:deploy
+```
+
+Other commands: `npm run prod:status` | `prod:logs` | `prod:stop`
 
 ## Nginx
 

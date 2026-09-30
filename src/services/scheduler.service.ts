@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon';
 import { Device } from '../models/device.model.js';
 import { PrayerPushJob } from '../models/prayer-push-job.model.js';
-import { fetchUpcomingPrayerSlots, type PrayerName } from './aladhan.service.js';
+import { fetchSlotsToSchedule, type PrayerName } from './aladhan.service.js';
 
 function dedupeKey(deviceId: string, prayerName: PrayerName, at: Date): string {
   const day = DateTime.fromJSDate(at).toISODate();
@@ -16,7 +16,7 @@ export class SchedulerService {
     await PrayerPushJob.deleteMany({ deviceId: device._id, sent: false });
 
     const now = DateTime.now().setZone(device.timezone);
-    const slots = await fetchUpcomingPrayerSlots(
+    const slots = await fetchSlotsToSchedule(
       device.latitude,
       device.longitude,
       device.timezone,
@@ -27,8 +27,12 @@ export class SchedulerService {
     for (const slot of slots) {
       if (slot.at.getTime() <= Date.now()) continue;
 
-      await PrayerPushJob.updateOne(
-        { dedupeKey: dedupeKey(String(device._id), slot.prayerName, slot.at) },
+      const key = dedupeKey(String(device._id), slot.prayerName, slot.at);
+      const alreadySent = await PrayerPushJob.exists({ dedupeKey: key, sent: true });
+      if (alreadySent) continue;
+
+      await PrayerPushJob.findOneAndUpdate(
+        { dedupeKey: key, sent: { $ne: true } },
         {
           $set: {
             deviceId: device._id,
@@ -54,5 +58,4 @@ export class SchedulerService {
     }
     return { devices: devices.length, jobs };
   }
-
 }

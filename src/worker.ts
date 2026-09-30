@@ -20,9 +20,13 @@ async function main() {
     void dispatchDuePrayerPushes().catch((err) => console.error('[dispatcher]', err));
   });
 
-  cron.schedule('5 0 * * *', () => {
-    void scheduler.scheduleAllDevices().catch((err) => console.error('[daily-schedule]', err));
-  });
+  cron.schedule(
+    '1 0 * * *',
+    () => {
+      void scheduler.scheduleAllDevices().catch((err) => console.error('[daily-schedule]', err));
+    },
+    { timezone: 'Asia/Karachi' },
+  );
 
   console.log('Azan worker running (MongoDB scheduler, no Redis)');
 

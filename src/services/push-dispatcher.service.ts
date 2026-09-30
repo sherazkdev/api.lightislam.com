@@ -16,14 +16,16 @@ export async function dispatchDuePrayerPushes(): Promise<number> {
     const fcmToken = device?.fcmToken ?? job.fcmToken;
 
     const result = await sendAzanReminderSafe(fcmToken, job.prayerName as PrayerName, job.time);
-    await PrayerPushJob.updateOne({ _id: job._id }, { $set: { sent: true } });
 
     if (result === 'invalid_token') {
+      await PrayerPushJob.updateOne({ _id: job._id }, { $set: { sent: true } });
       await Device.deleteOne({ _id: job.deviceId });
       await PrayerPushJob.deleteMany({ deviceId: job.deviceId, sent: false });
-    } else {
-      sent++;
+      continue;
     }
+
+    await PrayerPushJob.updateOne({ _id: job._id }, { $set: { sent: true } });
+    sent++;
   }
   return sent;
 }

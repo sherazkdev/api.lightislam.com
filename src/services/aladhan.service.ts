@@ -57,19 +57,20 @@ export async function fetchPrayerSlotsForDate(
   return slots;
 }
 
-export async function fetchUpcomingPrayerSlots(
+/** Today + tomorrow prayers still in the future (for reliable scheduling). */
+export async function fetchSlotsToSchedule(
   latitude: number,
   longitude: number,
   timezone: string,
   now = DateTime.now().setZone(timezone),
 ): Promise<PrayerSlot[]> {
   const today = await fetchPrayerSlotsForDate(latitude, longitude, timezone, now.startOf('day'));
-  const upcoming = today.filter((s) => s.at.getTime() > now.toMillis());
-
-  if (upcoming.length > 0) {
-    return upcoming;
-  }
-
-  const tomorrow = now.plus({ days: 1 }).startOf('day');
-  return fetchPrayerSlotsForDate(latitude, longitude, timezone, tomorrow);
+  const tomorrow = await fetchPrayerSlotsForDate(
+    latitude,
+    longitude,
+    timezone,
+    now.plus({ days: 1 }).startOf('day'),
+  );
+  const cutoff = now.toMillis();
+  return [...today, ...tomorrow].filter((s) => s.at.getTime() > cutoff);
 }
