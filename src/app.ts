@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import mongoose from 'mongoose';
 import { loadEnv } from './config/env.js';
 
+import { registerRateLimit } from './plugins/rate-limit.js';
 import { registerSwagger } from './plugins/swagger.js';
 
 import { deviceRoutes } from './routes/devices.routes.js';
@@ -29,6 +30,7 @@ export async function buildApp(scheduler: SchedulerService) {
 
 
   await app.register(sensible);
+  await registerRateLimit(app);
   await registerSwagger(app);
 
   app.setErrorHandler((error, _request, reply) => {

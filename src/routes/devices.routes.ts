@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { Device } from '../models/device.model.js';
+import { requireApiKey } from '../hooks/api-key.js';
 import { registerDeviceBodySchema } from '../schemas/device.schema.js';
 import type { SchedulerService } from '../services/scheduler.service.js';
 
@@ -26,11 +27,19 @@ export async function deviceRoutes(app: FastifyInstance, scheduler: SchedulerSer
   app.post(
     '/api/v1/devices',
     {
+      preHandler: requireApiKey,
+      config: {
+        rateLimit: {
+          max: 15,
+          timeWindow: '1 minute',
+        },
+      },
       schema: {
         tags: ['Devices'],
         summary: 'Register or update device',
         description:
           'Upserts by FCM token. Schedules azan reminder pushes for this device (server-side). Client must not send prayer times.',
+        security: [{ ApiKeyAuth: [] }],
         body: registerDeviceBody,
         response: {
           201: registerDeviceResponse,

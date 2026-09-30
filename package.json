@@ -27,6 +27,7 @@
     "pm2:reload": "npm run prod:build && npm run prod:reload"
   },
   "dependencies": {
+    "@fastify/rate-limit": "^11.2.0",
     "@fastify/sensible": "^6.0.3",
     "@fastify/swagger": "^9.9.0",
     "@fastify/swagger-ui": "^6.1.1",

@@ -20,6 +20,16 @@ export async function registerSwagger(app: FastifyInstance): Promise<void> {
         { name: 'Health', description: 'Service health' },
         { name: 'Devices', description: 'FCM device registration' },
       ],
+      components: {
+        securitySchemes: {
+          ApiKeyAuth: {
+            type: 'apiKey',
+            name: 'x-api-key',
+            in: 'header',
+            description: 'Same value as server APP_API_KEY (mobile app only)',
+          },
+        },
+      },
     },
   });
 
