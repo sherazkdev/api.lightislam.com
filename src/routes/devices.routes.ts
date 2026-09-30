@@ -61,7 +61,21 @@ export async function deviceRoutes(app: FastifyInstance, scheduler: SchedulerSer
         { upsert: true, new: true, setDefaultsOnInsert: true },
       ).lean();
 
-      const scheduled = await scheduler.scheduleDeviceById(String(device._id));
+      let scheduled = 0;
+      try {
+        scheduled = await scheduler.scheduleDeviceById(String(device._id));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'schedule_failed';
+        request.log.error({ err, deviceId: device._id }, 'Prayer schedule failed');
+        return reply.code(400).send({
+          ok: false,
+          error: 'schedule_failed',
+          message:
+            message.includes('Aladhan')
+              ? 'Could not fetch prayer times. Use IANA timezone (e.g. Asia/Karachi), not UTC+5.'
+              : message,
+        });
+      }
 
       request.log.info(
         {
