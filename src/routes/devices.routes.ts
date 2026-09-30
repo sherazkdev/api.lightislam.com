@@ -24,6 +24,15 @@ const registerDeviceResponse = {
   },
 } as const;
 
+const registerDeviceErrorResponse = {
+  type: 'object',
+  properties: {
+    ok: { type: 'boolean' },
+    error: { type: 'string' },
+    message: { type: 'string' },
+  },
+} as const;
+
 export async function deviceRoutes(app: FastifyInstance, scheduler: SchedulerService): Promise<void> {
   app.post(
     '/api/v1/devices',
@@ -44,6 +53,7 @@ export async function deviceRoutes(app: FastifyInstance, scheduler: SchedulerSer
         body: registerDeviceBody,
         response: {
           201: registerDeviceResponse,
+          400: registerDeviceErrorResponse,
         },
       },
     },
